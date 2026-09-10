@@ -37,6 +37,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
+            export PATH="$HOME/.local/bin:$PATH"
             cd /opt/channel-filter
             git pull --ff-only
             uv sync
