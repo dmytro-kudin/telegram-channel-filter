@@ -123,6 +123,20 @@ Each scenario below maps to an acceptance scenario in `spec.md`.
 5. As a non-operator subscriber, attempt `/broadcast` or `/stats`.
 6. **Expected**: refused for both.
 
+### 9. Restart survival (FR-015, SC-007)
+
+1. With at least one subscriber that has saved keywords and is paused
+   (`/stop`), stop the running bot process (e.g. `Ctrl+C`, or once deployed,
+   `sudo systemctl restart channel-filter` or a full VM reboot).
+2. Restart it: `python -m channel_filter.main` (or let systemd restart it
+   automatically).
+3. As that subscriber, send `/list`.
+4. **Expected**: the same keywords are still there, with no reconfiguration
+   needed.
+5. As that subscriber, send `/start`.
+6. **Expected**: notifications resume immediately (the paused state and
+   keyword list both survived the restart intact).
+
 ## Automated test run
 
 ```bash

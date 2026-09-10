@@ -157,6 +157,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# Telegram channel filter: Telethon session and local SQLite DB
+*.session
+*.session-journal
+*.db
+
 # Spyder project settings
 .spyderproject
 .spyproject

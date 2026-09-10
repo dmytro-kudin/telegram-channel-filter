@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram Channel Keyword Filter Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/channel-filter
+EnvironmentFile=/opt/channel-filter/.env
+ExecStart=/opt/channel-filter/.venv/bin/python -m channel_filter.main
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
