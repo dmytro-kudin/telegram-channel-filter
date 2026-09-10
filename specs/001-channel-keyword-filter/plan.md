@@ -49,7 +49,14 @@ persisted (see data-model.md)
 
 **Testing**: pytest + pytest-asyncio
 
-**Target Platform**: Single Linux server/container, one long-running process
+**Target Platform**: Oracle Cloud Infrastructure, Always Free tier — a
+single long-running Linux VM instance. Default shape:
+`VM.Standard.E2.1.Micro` (x86_64, 1/8 OCPU, 1GB RAM), which comfortably
+fits the resource constraints below. The Ampere A1 Always-Free shape
+(ARM64, up to 4 OCPU/24GB, shareable across multiple instances) is an
+acceptable alternative if more headroom is wanted, contingent on
+confirming `pyahocorasick`'s C extension builds cleanly on `aarch64`
+(research.md §8).
 
 **Project Type**: Single project (backend service / bot) — no frontend, no
 separate API layer beyond the Telegram bot itself
@@ -61,7 +68,15 @@ target under the expected ≤2 posts/sec channel volume
 
 **Constraints**: Single CPU core, <150MB RAM steady-state; no native
 Telegram forward available (bot isn't a channel member — see spec.md §
-rationale in User Story context); source channel is plain text only
+rationale in User Story context); source channel is plain text only. The
+SQLite DB file and Telethon's `.session` file MUST live on the VM's
+persistent boot/block volume, not an ephemeral disk, so FR-015's
+restart-survival guarantee holds across VM reboots, not just process
+restarts. The process MUST run under a supervisor (systemd unit or
+equivalent) for auto-restart on crash or reboot. Networking needs outbound
+HTTPS (Bot API) and MTProto (Telethon) only — no inbound listener, so no
+ingress/security-list changes are required beyond Oracle's default outbound
+allow (research.md §8).
 
 **Scale/Scope**: ≤100 subscribers, ≤20 keywords/subscriber (≤2000 keywords
 total) — trivial rebuild cost for `pyahocorasick` at this scale
@@ -125,11 +140,14 @@ tests/
 ├── unit/
 │   ├── test_pipeline.py    # jar-link / pure-number / keyword-stage short-circuit logic
 │   ├── test_matcher.py     # rebuild-and-swap correctness, incl. rebuild on eligibility change
-│   ├── test_db.py          # CRUD, uniqueness constraint, 20-keyword cap, active/blocked flags, delete, stats
+│   ├── test_db.py          # CRUD, uniqueness constraint, 20-keyword cap, active/blocked flags, delete, stats, restart-survival
 │   ├── test_auth.py        # require_operator accepts the configured admin, refuses everyone else
 │   └── test_bot_commands.py # command handlers (incl. admin ones) against a stubbed db + stubbed send
 └── integration/
     └── test_pipeline_to_notifier.py  # pipeline output correctly enqueues notifier jobs
+
+deploy/
+└── channel-filter.service  # systemd unit for the Oracle Cloud VM: ExecStart, EnvironmentFile=.env, Restart=on-failure (Constraints, research.md §8)
 ```
 
 **Structure Decision**: Single project, one flat package (`src/channel_filter/`)

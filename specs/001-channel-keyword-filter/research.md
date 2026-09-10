@@ -81,6 +81,17 @@ not supported by the library and unnecessary at this scale; a read-write
 lock around every match lookup — rejected as unneeded overhead given the
 atomic-reference-swap approach already avoids torn reads.
 
+**Constitution compliance note**: `make_automaton()` is a synchronous,
+CPU-bound C call. Per Coding Standards ("Async code... MUST NOT perform
+blocking I/O or CPU-bound work directly; blocking calls MUST be dispatched
+via `asyncio.to_thread`"), the build step MUST run as
+`await asyncio.to_thread(automaton.make_automaton)` rather than being
+called directly from the async rebuild coroutine. The rule has no
+scale-based exception — sub-millisecond cost doesn't exempt it — and
+wrapping it costs nothing but a single coroutine hop, so there's no reason
+to take the direct-call shortcut even though it would be imperceptible at
+this scale.
+
 ## 5. Rate limiting and flood-wait handling
 
 **Decision**: A single global `asyncio.Queue` feeding one sender task that
@@ -176,3 +187,38 @@ single operator running one instance.
 variable for a fully stateless/portable deployment — rejected as
 unnecessary given this is a single, long-running instance, not a
 horizontally-scaled or frequently-redeployed service.
+
+## 8. Deployment target: Oracle Cloud Infrastructure Always Free tier (added after initial plan)
+
+**Decision**: Deploy to a single Oracle Cloud Always-Free VM. Default to
+the `VM.Standard.E2.1.Micro` x86_64 shape (1/8 OCPU, 1GB RAM) with the
+SQLite file, `.session` file, and `.env` all stored on the VM's persistent
+boot volume, and the process supervised by a systemd unit
+(`Restart=on-failure`, `WantedBy=multi-user.target`) so it survives both
+crashes and VM reboots without manual intervention.
+
+**Rationale**: The E2.1.Micro shape's 1GB RAM / 1/8 OCPU already exceeds
+plan.md's stated steady-state budget (<150MB RAM, single core), so no
+resource-driven redesign is needed. Always Free carves out 2 such
+instances plus up to 200GB of block storage at no cost, which is more than
+this single-process bot needs. Because the bot only opens outbound
+connections (Telethon's MTProto client, aiogram's long-polling to the Bot
+API) and never listens for inbound traffic, Oracle's default VCN security
+list (which allows all outbound, denies inbound by default) requires no
+changes — no port needs to be opened. Continuous 24/7 operation of the VM
+and its bot process also avoids Oracle's idle-resource reclamation policy,
+which targets stopped/unused Always Free resources, not actively running
+ones.
+
+**Alternatives considered**: The Ampere A1 Always-Free shape (ARM64, up to
+4 OCPU / 24GB, can be split across instances) — more headroom than this
+workload needs, and left as an optional upgrade path rather than the
+default, since `pyahocorasick`'s C extension would need its `aarch64` wheel
+availability (or successful source build via `pip`, which requires a C
+toolchain to be present on the image) confirmed before relying on it;
+`x86_64` has no such open question. A managed container platform (Oracle
+Container Instances, or a Kubernetes-based approach) — rejected as
+unnecessary operational overhead for a single always-on process with no
+scaling or multi-service requirements, and it would complicate persisting
+the SQLite file and `.session` file across restarts for no benefit at this
+scale.
