@@ -1,6 +1,7 @@
 from channel_filter import db
 from channel_filter.messages import MAX_KEYWORDS_PER_SUBSCRIBER
 from channel_filter.types import Added, AlreadyExists, LimitReached, NotFound, Removed, TooShort
+from channel_filter.types import Keyword
 
 
 async def test_get_or_create_subscriber_registers_new_subscriber_as_active(conn):
@@ -35,13 +36,18 @@ async def test_add_keyword_rejects_short_keyword(conn):
 
 
 async def test_list_keywords_returns_all_saved_keywords(conn):
+    # Intentional breaking change for 002-button-driven-ux (data-model.md): list_keywords
+    # now returns Keyword objects (id + substring), not bare strings, so inline-keyboard
+    # delete buttons have a stable id to encode in callback_data.
     await db.get_or_create_subscriber(conn, 42)
     await db.add_keyword(conn, 42, "sale")
     await db.add_keyword(conn, 42, "discount")
 
     keywords = await db.list_keywords(conn, 42)
 
-    assert sorted(keywords) == ["discount", "sale"]
+    assert all(isinstance(kw, Keyword) for kw in keywords)
+    assert sorted(kw.substring for kw in keywords) == ["discount", "sale"]
+    assert len({kw.id for kw in keywords}) == 2
 
 
 async def test_list_keywords_empty_for_new_subscriber(conn):
@@ -62,6 +68,37 @@ async def test_remove_keyword_success(conn):
     assert await db.list_keywords(conn, 42) == []
 
 
+async def test_remove_keyword_by_id_success(conn):
+    await db.get_or_create_subscriber(conn, 42)
+    await db.add_keyword(conn, 42, "sale")
+    (keyword,) = await db.list_keywords(conn, 42)
+
+    outcome = await db.remove_keyword_by_id(conn, 42, keyword.id)
+
+    assert outcome == Removed()
+    assert await db.list_keywords(conn, 42) == []
+
+
+async def test_remove_keyword_by_id_not_found(conn):
+    await db.get_or_create_subscriber(conn, 42)
+
+    outcome = await db.remove_keyword_by_id(conn, 42, 999)
+
+    assert outcome == NotFound()
+
+
+async def test_remove_keyword_by_id_wrong_subscriber_is_not_found(conn):
+    await db.get_or_create_subscriber(conn, 42)
+    await db.get_or_create_subscriber(conn, 43)
+    await db.add_keyword(conn, 42, "sale")
+    (keyword,) = await db.list_keywords(conn, 42)
+
+    outcome = await db.remove_keyword_by_id(conn, 43, keyword.id)
+
+    assert outcome == NotFound()
+    assert [kw.substring for kw in await db.list_keywords(conn, 42)] == ["sale"]
+
+
 async def test_remove_keyword_not_found(conn):
     await db.get_or_create_subscriber(conn, 42)
 
@@ -77,7 +114,7 @@ async def test_add_keyword_case_insensitive_dedup_is_noop(conn):
     outcome = await db.add_keyword(conn, 42, "sale")
 
     assert outcome == AlreadyExists()
-    assert await db.list_keywords(conn, 42) == ["sale"]
+    assert [kw.substring for kw in await db.list_keywords(conn, 42)] == ["sale"]
 
 
 async def test_add_keyword_rejects_over_limit(conn):
@@ -188,4 +225,4 @@ async def test_subscriber_and_keyword_state_survives_reconnect(tmp_path):
 
     assert subscriber.active is False
     assert subscriber.blocked is True
-    assert keywords == ["sale"]
+    assert [kw.substring for kw in keywords] == ["sale"]

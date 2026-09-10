@@ -23,6 +23,8 @@ HELP = (
     "/help — показати це повідомлення"
 )
 
+ADD_PROMPT = "Введіть одне або кілька ключових слів через кому."
+
 ADD_TOO_SHORT = f"Ключове слово має містити щонайменше {MIN_KEYWORD_LENGTH} символи."
 ADD_LIMIT_REACHED = (
     f"Ви досягли ліміту в {MAX_KEYWORDS_PER_SUBSCRIBER} ключових слів. "
@@ -44,10 +46,13 @@ def remove_success(keyword: str) -> str:
 
 LIST_EMPTY = "У вас поки немає збережених ключових слів."
 
+LIST_HEADER = "Ваші ключові слова (натисніть, щоб видалити):"
 
-def list_keywords(keywords: list[str]) -> str:
-    lines = "\n".join(f"— {kw}" for kw in keywords)
-    return f"Ваші ключові слова:\n{lines}"
+KEYWORD_ALREADY_REMOVED = "Це ключове слово вже видалено."
+
+
+def delete_confirm_prompt(keyword: str) -> str:
+    return f"Видалити «{keyword}»?"
 
 
 STOP_CONFIRMATION = (
@@ -58,6 +63,14 @@ STOP_CONFIRMATION = (
 DELETE_CONFIRMATION = (
     "Ваш акаунт і всі ключові слова назавжди видалено. "
     "Наступний /start почне все з чистого аркуша."
+)
+
+ADMIN_HELP_SECTION = (
+    "Команди оператора:\n"
+    "/broadcast <текст> — розіслати повідомлення всім активним підписникам\n"
+    "/stats — переглянути статистику підписників\n"
+    "/block <chat_id> — заблокувати підписника\n"
+    "/unblock <chat_id> — розблокувати підписника"
 )
 
 BLOCKED = "Вас заблоковано оператором. Ви не можете користуватися цим ботом."

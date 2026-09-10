@@ -12,9 +12,15 @@ class FakeChat:
 class FakeMessage:
     chat: FakeChat
     sent: list[str] = field(default_factory=list)
+    markups: list = field(default_factory=list)
+    edits: list[tuple[str, object]] = field(default_factory=list)
 
-    async def answer(self, text: str, **kwargs) -> None:
+    async def answer(self, text: str, reply_markup=None, **kwargs) -> None:
         self.sent.append(text)
+        self.markups.append(reply_markup)
+
+    async def edit_text(self, text: str, reply_markup=None, **kwargs) -> None:
+        self.edits.append((text, reply_markup))
 
 
 @dataclass
@@ -32,3 +38,27 @@ class FakeNotifier:
 
     async def enqueue(self, job) -> None:
         self.jobs.append(job)
+
+
+@dataclass
+class FakeFSMContext:
+    state: object | None = None
+
+    async def set_state(self, state) -> None:
+        self.state = state
+
+    async def get_state(self):
+        return self.state
+
+    async def clear(self) -> None:
+        self.state = None
+
+
+@dataclass
+class FakeCallbackQuery:
+    data: str
+    message: FakeMessage
+    answered: list[tuple[str | None, bool]] = field(default_factory=list)
+
+    async def answer(self, text: str | None = None, show_alert: bool = False) -> None:
+        self.answered.append((text, show_alert))

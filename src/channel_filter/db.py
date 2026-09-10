@@ -9,6 +9,7 @@ from channel_filter.types import (
     Added,
     AddKeywordOutcome,
     AlreadyExists,
+    Keyword,
     LimitReached,
     NotFound,
     Removed,
@@ -125,12 +126,12 @@ async def set_active(conn: aiosqlite.Connection, chat_id: int, active: bool) -> 
     await conn.commit()
 
 
-async def list_keywords(conn: aiosqlite.Connection, chat_id: int) -> list[str]:
+async def list_keywords(conn: aiosqlite.Connection, chat_id: int) -> list[Keyword]:
     cursor = await conn.execute(
-        "SELECT substring FROM keywords WHERE chat_id = ? ORDER BY id", (chat_id,)
+        "SELECT id, substring FROM keywords WHERE chat_id = ? ORDER BY id", (chat_id,)
     )
     rows = await cursor.fetchall()
-    return [row[0] for row in rows]
+    return [Keyword(id=row[0], chat_id=chat_id, substring=row[1]) for row in rows]
 
 
 async def remove_keyword(conn: aiosqlite.Connection, chat_id: int, substring: str) -> RemoveKeywordOutcome:
@@ -138,6 +139,19 @@ async def remove_keyword(conn: aiosqlite.Connection, chat_id: int, substring: st
     cursor = await conn.execute(
         "DELETE FROM keywords WHERE chat_id = ? AND substring = ?",
         (chat_id, normalized),
+    )
+    await conn.commit()
+    if cursor.rowcount == 0:
+        return NotFound()
+    return Removed()
+
+
+async def remove_keyword_by_id(
+    conn: aiosqlite.Connection, chat_id: int, keyword_id: int
+) -> RemoveKeywordOutcome:
+    cursor = await conn.execute(
+        "DELETE FROM keywords WHERE chat_id = ? AND id = ?",
+        (chat_id, keyword_id),
     )
     await conn.commit()
     if cursor.rowcount == 0:
