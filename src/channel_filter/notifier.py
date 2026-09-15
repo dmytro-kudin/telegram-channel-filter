@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
 
+import aiosqlite
 from aiogram import Bot
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from channel_filter import db
 from channel_filter.messages import VIEW_ORIGINAL
 
 MESSAGES_PER_SECOND = 25.0
@@ -25,8 +28,9 @@ class NotificationJob:
 class Notifier:
     """Single global queue feeding one sender task with a token-bucket throttle."""
 
-    def __init__(self, channel_username: str | None = None) -> None:
+    def __init__(self, conn: aiosqlite.Connection, channel_username: str | None = None) -> None:
         self._queue: asyncio.Queue[NotificationJob] = asyncio.Queue()
+        self._conn = conn
         self._channel_username = channel_username
         self._min_interval = 1.0 / MESSAGES_PER_SECOND
         self._last_sent = 0.0
@@ -37,7 +41,12 @@ class Notifier:
     async def run(self, bot: Bot) -> None:
         while True:
             job = await self._queue.get()
-            await self._send(bot, job)
+            try:
+                await self._send(bot, job)
+            except Exception:
+                logging.exception(
+                    "unexpected error handling notification job for %s", job.chat_id
+                )
 
     async def _send(self, bot: Bot, job: NotificationJob) -> None:
         now = time.monotonic()
@@ -58,3 +67,8 @@ class Notifier:
         except TelegramRetryAfter as exc:
             await asyncio.sleep(exc.retry_after)
             await self._queue.put(job)
+        except TelegramForbiddenError:
+            await db.set_blocked(self._conn, job.chat_id, True)
+            logging.info("subscriber %s blocked the bot; marked blocked", job.chat_id)
+        except Exception:
+            logging.exception("failed to deliver notification to %s", job.chat_id)

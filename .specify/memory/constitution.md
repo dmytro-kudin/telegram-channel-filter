@@ -1,15 +1,11 @@
 <!--
 Sync Impact Report
-Version change: (none) → 1.0.0
-Modified principles: n/a (initial ratification)
+Version change: 1.0.0 → 1.1.0
+Modified principles: n/a (no existing principle redefined)
 Added sections:
-  - Core Principles: I. No Assumptions, No Inferred Intent
-  - Core Principles: II. Explicit, Typed Error Handling
-  - Core Principles: III. Typed Domain Values Over Raw Primitives
-  - Core Principles: IV. Cross-Cutting Concerns Stay Out of Business Logic
-  - Coding Standards
-  - Development Workflow: Test-Driven Development (Superpowers TDD Protocol)
-  - Governance
+  - Core Principles: V. Resilient by Default (Self-Healing Runtime)
+  - Coding Standards: one new bullet operationalizing Principle V for
+    long-running/background tasks
 Removed sections: none
 Deferred items: none
 Templates requiring follow-up: none checked in this run — dependent templates
@@ -64,6 +60,30 @@ Rationale: separating cross-cutting concerns from business logic keeps core
 logic testable in isolation and prevents the same concern from being
 implemented inconsistently across the codebase.
 
+### V. Resilient by Default (Self-Healing Runtime)
+Every exception that can occur during normal operation MUST be explicitly
+handled somewhere in the call chain — either recovered inline per Principle
+II, or deliberately allowed to escalate to a defined recovery boundary. An
+exception MUST NOT be permitted to escape unhandled into an unsupervised
+part of the system.
+Every independently-recoverable long-running unit of work (a background
+listener, a polling loop, a queue consumer, or similar) MUST run under a
+supervising boundary that catches an unhandled failure in that unit, logs
+it, and automatically restores that unit's functionality without manual
+intervention — a failure in one such unit MUST NOT degrade or interrupt any
+other unit. Automatic restoration MUST retry at a steady, bounded pace
+(neither an unbounded tight loop nor giving up permanently).
+If a failure occurs that is not recoverable at any supervising boundary, the
+system MUST terminate promptly rather than continue running in a
+non-functional state — the process MUST NOT be left alive-but-inert, since
+that state is invisible to both users and process-level supervisors (e.g.
+systemd `Restart=on-failure`) and defeats their ability to restore service.
+Rationale: a system that stays "running" while silently doing nothing is
+worse than one that visibly crashes, because nothing — neither an operator
+nor an automated restart — is triggered to fix it; resilience means
+functionality is restored automatically, not merely that a process object
+continues to exist.
+
 ## Coding Standards
 
 - Module and package layout MUST match the logical structure of the code
@@ -81,6 +101,10 @@ implemented inconsistently across the codebase.
   decorator rather than duplicated inline at each call site.
 - Shared constants, message templates, and configuration values MUST be
   defined once and imported, never duplicated or re-typed at each usage site.
+- Long-running background tasks (event loops, pollers, queue consumers) MUST
+  be wrapped by a supervising retry loop so an unhandled exception restarts
+  just that task, per Principle V, rather than terminating the whole process
+  silently.
 
 ## Development Workflow
 
@@ -132,4 +156,4 @@ Compliance: all pull requests and code reviews MUST verify adherence to these
 principles. Any deviation MUST be explicitly justified in the PR description;
 unjustified deviations MUST be rejected in review.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-10
+**Version**: 1.1.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-15

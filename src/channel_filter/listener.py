@@ -58,3 +58,31 @@ def build_client(
         await process_channel_post(post, stages, conn, notifier, channel_username)
 
     return client
+
+
+async def run_listener_forever(
+    api_id: int,
+    api_hash: str,
+    source_channel: str,
+    stages: list[Stage],
+    conn: aiosqlite.Connection,
+    notifier: Notifier,
+    channel_username: str,
+) -> None:
+    """Build a fresh client, start it, and run until disconnected.
+
+    Called by the supervisor on every (re)start — a client that has
+    disconnected due to an error is not safe to reuse, so a new one is
+    constructed on each attempt.
+    """
+    client = build_client(
+        api_id=api_id,
+        api_hash=api_hash,
+        source_channel=source_channel,
+        stages=stages,
+        conn=conn,
+        notifier=notifier,
+        channel_username=channel_username,
+    )
+    await client.start()
+    await client.run_until_disconnected()
