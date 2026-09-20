@@ -36,7 +36,7 @@ class AddKeywords(StatesGroup):
 async def _answer_with_menu(message: Message, conn: aiosqlite.Connection, text: str) -> None:
     """Reply with `text` and the persistent subscriber menu reflecting current active state."""
     subscriber = await db.get_or_create_subscriber(conn, message.chat.id)
-    await message.answer(text, reply_markup=keyboards.subscriber_menu(subscriber.active))
+    await message.answer(text, reply_markup=keyboards.subscriber_menu(subscriber.active), parse_mode=ParseMode.HTML)
 
 
 def _parse_keyword_batch(raw: str) -> list[str]:
