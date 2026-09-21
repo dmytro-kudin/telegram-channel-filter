@@ -38,6 +38,17 @@ jobs:
           script: |
             set -euo pipefail
             export PATH="$HOME/.local/bin:$PATH"
+
+            # Validate required secrets are set
+            if [ -z "${{ secrets.DEPLOY_API_ID }}" ] || [ -z "${{ secrets.DEPLOY_API_HASH }}" ] || [ -z "${{ secrets.DEPLOY_BOT_TOKEN }}" ] || [ -z "${{ secrets.DEPLOY_ADMIN_CHAT_ID }}" ]; then
+              echo "ERROR: Required GitHub secrets are not set. Configure these in Settings > Secrets and variables > Actions:"
+              echo "  - DEPLOY_API_ID"
+              echo "  - DEPLOY_API_HASH"
+              echo "  - DEPLOY_BOT_TOKEN"
+              echo "  - DEPLOY_ADMIN_CHAT_ID"
+              exit 1
+            fi
+
             cd /opt/channel-filter
 
             # Create .env file from GitHub secrets
