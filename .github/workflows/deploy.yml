@@ -42,11 +42,11 @@ jobs:
 
             # Create .env file from GitHub secrets
             cat > .env << 'EOF'
-            API_ID=${{ secrets.API_ID }}
-            API_HASH=${{ secrets.API_HASH }}
-            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-            SOURCE_CHANNEL=${{ secrets.SOURCE_CHANNEL }}
-            ADMIN_CHAT_ID=${{ secrets.ADMIN_CHAT_ID }}
+            API_ID=${{ secrets.DEPLOY_API_ID }}
+            API_HASH=${{ secrets.DEPLOY_API_HASH }}
+            BOT_TOKEN=${{ secrets.DEPLOY_BOT_TOKEN }}
+            SOURCE_CHANNEL=@chyste_nebo
+            ADMIN_CHAT_ID=${{ secrets.DEPLOY_ADMIN_CHAT_ID }}
             DB_PATH=./channel_filter.db
             EOF
 

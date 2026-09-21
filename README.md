@@ -275,17 +275,15 @@ them.
 
 Configure these in GitHub Settings → Secrets and variables → Actions:
 
-**Deployment secrets** (one-time setup):
 - `DEPLOY_HOST` — IP or hostname of the deployment server
 - `DEPLOY_USER` — SSH username (usually `ubuntu` or `root`)
 - `DEPLOY_SSH_KEY` — SSH private key with access to the server
+- `DEPLOY_API_ID` — Telegram API ID from https://my.telegram.org
+- `DEPLOY_API_HASH` — Telegram API hash from https://my.telegram.org
+- `DEPLOY_BOT_TOKEN` — Bot token from @BotFather on Telegram
+- `DEPLOY_ADMIN_CHAT_ID` — Your Telegram user ID (find via @userinfobot)
 
-**Bot/API secrets** (can be rotated independently):
-- `API_ID` — Telegram API ID from https://my.telegram.org
-- `API_HASH` — Telegram API hash from https://my.telegram.org
-- `BOT_TOKEN` — Bot token from @BotFather on Telegram
-- `ADMIN_CHAT_ID` — Your Telegram user ID (find via @userinfobot)
-- `SOURCE_CHANNEL` — Public channel @username to monitor
+The source channel is hardcoded as `@chyste_nebo` in the deployment script.
 
 To deploy, configure all secrets above, do the one-time manual setup (minus
 the `.env` copy step) on the target host, then trigger the workflow from the
