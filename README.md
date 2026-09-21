@@ -219,6 +219,9 @@ with a GitHub Actions pipeline handling test-then-deploy over SSH.
 
 ### Manual deployment (any Linux host with systemd)
 
+For production, use the GitHub Actions workflow (easier and more secure). For
+local setup or debugging:
+
 ```bash
 # on the server
 sudo mkdir -p /opt/channel-filter
@@ -226,12 +229,17 @@ cd /opt/channel-filter
 git clone <this-repo> .
 curl -LsSf https://astral.sh/uv/install.sh | sh   # if uv isn't installed yet
 uv sync
+
+# For manual setup, create .env from template and fill in values
 cp .env.example .env && nano .env                  # fill in real values
 
 sudo cp deploy/channel-filter.service /etc/systemd/system/channel-filter.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now channel-filter
 ```
+
+If using GitHub Actions for deployment, skip the `.env` copy step above —
+the workflow will create it automatically from repository secrets.
 
 The unit file (`deploy/channel-filter.service`) runs
 `/opt/channel-filter/.venv/bin/python -m channel_filter.main` with
@@ -259,13 +267,29 @@ them.
 - **`test`** — on every push/PR to `main`: installs `uv`, runs `uv sync`,
   then `uv run pytest`.
 - **`deploy`** — only on a manual `workflow_dispatch` run, and only after
-  `test` passes: SSHes into the host (via `secrets.DEPLOY_HOST` /
-  `DEPLOY_USER` / `DEPLOY_SSH_KEY`), `git pull --ff-only`, `uv sync`, restarts
+  `test` passes: SSHes into the host (via deployment secrets), creates the
+  `.env` file from bot/API secrets, `git pull --ff-only`, `uv sync`, restarts
   the `channel-filter` systemd service, then verifies it's active.
 
-To deploy, configure those three repository secrets, do the one-time manual
-setup above on the target host, then trigger the workflow from the Actions
-tab (`Run workflow`) whenever you want to ship `main`.
+#### Repository Secrets
+
+Configure these in GitHub Settings → Secrets and variables → Actions:
+
+**Deployment secrets** (one-time setup):
+- `DEPLOY_HOST` — IP or hostname of the deployment server
+- `DEPLOY_USER` — SSH username (usually `ubuntu` or `root`)
+- `DEPLOY_SSH_KEY` — SSH private key with access to the server
+
+**Bot/API secrets** (can be rotated independently):
+- `API_ID` — Telegram API ID from https://my.telegram.org
+- `API_HASH` — Telegram API hash from https://my.telegram.org
+- `BOT_TOKEN` — Bot token from @BotFather on Telegram
+- `ADMIN_CHAT_ID` — Your Telegram user ID (find via @userinfobot)
+- `SOURCE_CHANNEL` — Public channel @username to monitor
+
+To deploy, configure all secrets above, do the one-time manual setup (minus
+the `.env` copy step) on the target host, then trigger the workflow from the
+Actions tab (`Run workflow`) whenever you want to ship `main`.
 
 ## Project layout
 

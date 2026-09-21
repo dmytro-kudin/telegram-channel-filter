@@ -39,6 +39,17 @@ jobs:
             set -euo pipefail
             export PATH="$HOME/.local/bin:$PATH"
             cd /opt/channel-filter
+
+            # Create .env file from GitHub secrets
+            cat > .env << 'EOF'
+            API_ID=${{ secrets.API_ID }}
+            API_HASH=${{ secrets.API_HASH }}
+            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+            SOURCE_CHANNEL=${{ secrets.SOURCE_CHANNEL }}
+            ADMIN_CHAT_ID=${{ secrets.ADMIN_CHAT_ID }}
+            DB_PATH=./channel_filter.db
+            EOF
+
             git pull --ff-only
             uv sync
             sudo systemctl restart channel-filter
