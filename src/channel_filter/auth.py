@@ -58,20 +58,3 @@ def refuse_if_blocked(handler: Handler) -> Handler:
 
     del wrapper.__wrapped__
     return wrapper
-
-
-def inject_admin_chat_id(handler: Handler) -> Handler:
-    """Wraps a handler to inject admin_chat_id from dispatcher context.
-
-    For handlers that need admin_chat_id but don't restrict access (unlike
-    require_operator). Same __wrapped__ and kwargs-filtering caveats apply.
-    """
-    handler_params = inspect.signature(handler).parameters
-
-    @functools.wraps(handler)
-    async def wrapper(message: Message, *, admin_chat_id: int, **kwargs: Any) -> None:
-        filtered = {k: v for k, v in kwargs.items() if k in handler_params}
-        await handler(message, admin_chat_id=admin_chat_id, **filtered)
-
-    del wrapper.__wrapped__
-    return wrapper

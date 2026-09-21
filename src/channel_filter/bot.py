@@ -12,7 +12,7 @@ from aiogram.enums import ParseMode
 
 from channel_filter import db, keyboards
 from channel_filter import messages as msg
-from channel_filter.auth import inject_admin_chat_id, refuse_if_blocked, require_operator
+from channel_filter.auth import refuse_if_blocked, require_operator
 from channel_filter.matcher import AutomatonManager
 from channel_filter.notifier import NotificationJob, Notifier
 from channel_filter.types import (
@@ -126,7 +126,6 @@ async def my_keywords_button_handler(
     await list_handler(message, conn=conn)
 
 
-@inject_admin_chat_id
 async def help_button_handler(
     message: Message, conn: aiosqlite.Connection, state: FSMContext, admin_chat_id: int
 ) -> None:
@@ -324,7 +323,6 @@ async def stats_handler(message: Message, conn: aiosqlite.Connection) -> None:
     )
 
 
-@inject_admin_chat_id
 async def help_handler(message: Message, conn: aiosqlite.Connection, admin_chat_id: int) -> None:
     text = msg.HELP
     if message.chat.id == admin_chat_id:
