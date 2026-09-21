@@ -40,6 +40,14 @@ jobs:
             export PATH="$HOME/.local/bin:$PATH"
             cd /opt/channel-filter
             git pull --ff-only
+            cat > .env << 'EOF'
+            API_ID=${{ secrets.DEPLOY_API_ID }}
+            API_HASH=${{ secrets.DEPLOY_API_HASH }}
+            BOT_TOKEN=${{ secrets.DEPLOY_BOT_TOKEN }}
+            SOURCE_CHANNEL=${{ secrets.DEPLOY_SOURCE_CHANNEL }}
+            ADMIN_CHAT_ID=${{ secrets.DEPLOY_ADMIN_CHAT_ID }}
+            DB_PATH=./channel_filter.db
+            EOF
             uv sync
             sudo systemctl restart channel-filter
             sleep 2
